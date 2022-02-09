@@ -51,7 +51,11 @@ fn parse_single(iter: &mut TokenIterator) -> Expression {
     match iter.next().unwrap() {
         Token::Label(label) => Expression::Label(label),
         Token::Operator(Not) => Expression::Inverse(parse_single(iter).into()),
-        Token::OpenGroup => parse_expression(iter),
+        Token::OpenGroup => { 
+            let expr = parse_expression(iter); 
+            assert_eq!(iter.next(), Some(Token::CloseGroup)); 
+            expr 
+        },
         _ => unimplemented!()
     }
 }
@@ -60,13 +64,8 @@ fn parse_expression(iter: &mut TokenIterator) -> Expression {
     let first = parse_single(iter);
 
     match iter.peek() {
-        None => {
-            // End of stream
-            return first;
-        },
-        Some(Token::CloseGroup) => {
-            // End of group, consume ')'
-            assert_eq!(iter.next(), Some(Token::CloseGroup));
+        None | Some(Token::CloseGroup) => {
+            // End of expression
             return first;
         },
         _ => {}
@@ -87,7 +86,7 @@ fn parse(tokens: Vec<Token>) -> Expression {
 
 fn main() {
     //let test_query = "tag:tag1 && (tag:tag2 || tag:tag3 || tag:tag4) && !bad";
-    let test_query = "tag:tag1 && (tag:tag2 || (tag:tag3 && asdf))";
+    let test_query = "tag:tag1 && (tag:tag2 || (tag:tag3 && !asdf))";
     let tokens = tokenize(test_query);
     let parsed = parse(tokens);
     println!("{:#?}", parsed);
